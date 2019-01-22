@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using Depressurizer.Core.Enums;
 using Depressurizer.Core.Helpers;
 using Depressurizer.Core.Models;
@@ -476,6 +477,76 @@ namespace Depressurizer.Core
                 }
 
                 updated++;
+            }
+
+            return updated;
+        }
+
+        public int UpdateFromHLTB(bool includeImputedTimes)
+        {
+            int updated = 0;
+
+            lock (SyncRoot)
+            {
+                using (WebClient client = new WebClient())
+                {
+                    string result = client.DownloadString(Constants.HowLongToBeat);
+
+                    if (result.Contains("An error has occurred."))
+                    {
+                        return updated;
+                    }
+
+                    HLTB_RawData rawData = JsonConvert.DeserializeObject<HLTB_RawData>(result);
+
+                    if (rawData == null)
+                    {
+                        return updated;
+                    }
+
+                    foreach (Game game in rawData.Games)
+                    {
+                        SteamAppData steamAppData = game.SteamAppData;
+                        int id = steamAppData.SteamAppId;
+                        if (!Contains(id, out DatabaseEntry entry))
+                        {
+                            continue;
+                        }
+
+                        HltbInfo info = steamAppData.HltbInfo;
+
+                        if (!includeImputedTimes && info.MainTtbImputed)
+                        {
+                            entry.HltbMain = 0;
+                        }
+                        else
+                        {
+                            entry.HltbMain = info.MainTtb;
+                        }
+
+                        if (!includeImputedTimes && info.ExtrasTtbImputed)
+                        {
+                            entry.HltbExtras = 0;
+                        }
+                        else
+                        {
+                            entry.HltbExtras = info.ExtrasTtb;
+                        }
+
+                        if (!includeImputedTimes && info.CompletionistTtbImputed)
+                        {
+                            entry.HltbCompletionists = 0;
+                        }
+                        else
+                        {
+                            entry.HltbCompletionists = info.CompletionistTtb;
+                        }
+
+                        updated++;
+                    }
+                }
+
+                LastHLTBUpdate = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             }
 
             return updated;
