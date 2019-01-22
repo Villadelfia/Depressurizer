@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using Depressurizer.Core.Enums;
 using Depressurizer.Core.Helpers;
@@ -326,7 +324,6 @@ namespace Depressurizer
             }
         }
 
-       
         #endregion
     }
 }
